@@ -27,12 +27,12 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.4
     hooks:
-      - id: ruff # really safe fixes
+      - id: ruff-check # really safe fixes
         name: ruff-fix
         alias: ruff-fix
         args: [--fix, --select, I]
       - id: ruff-format
-      - id: ruff
+      - id: ruff-check
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: 3.4.1
     hooks:
