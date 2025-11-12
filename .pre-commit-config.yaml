@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks # misc hooks
+    rev: v6.0.0
+    hooks:
+      - id: forbid-submodules
+      - id: check-case-conflict
+      - id: check-illegal-windows-names
+      - id: check-symlinks
+      - id: end-of-file-fixer
+        exclude: \.svg$
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: check-toml
+      - id: check-yaml
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.6.2
+    hooks:
+      - id: prettier
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        alias: toml-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.4
+    hooks:
+      - id: ruff-check # really safe fixes
+        name: ruff-fix
+        alias: ruff-fix
+        args: [--fix, --select, I]
+      - id: ruff-format
+      - id: ruff-check
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 3.4.1
+    hooks:
+      - id: editorconfig-checker
+        alias: ec
+        exclude: \.(ipynb|svg)$

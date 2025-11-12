@@ -1,0 +1,98 @@
+[build-system]
+requires = ["uv_build>=0.9.7,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "ledmap"
+version = "0.1"
+description = "LED pixel mapper"
+license = "MIT"
+readme = "README.md"
+authors = [{ name = "James Myatt", email = "james@jamesmyatt.co.uk" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "jupyterlab>=4.4.10",
+  "pre-commit>=4.3.0",
+  "pytest>=9.0.0",
+  "ruff>=0.14.3",
+]
+
+[tool.ruff]
+line-length = 88
+extend-exclude = [".ipynb_checkpoints"]
+
+[tool.ruff.lint]
+# in alphabetical order, see https://docs.astral.sh/ruff/rules/
+select = [
+  "A", # flake8-builtins
+  # "ANN", # flake8-annotations
+  "ARG",   # flake8-unused-arguments
+  "ASYNC", # flake8-async
+  "B",     # flake8-bugbear
+  "B9",    # flake8-bugbear
+  "BLE",   # flake8-blind-except
+  "C4",    # flake8-comprehensions
+  "C90",   # mccabe
+  "D",     # pydocstyle
+  "E",     # pycodestyle
+  "EM",    # flake8-errmsg
+  "F",     # pyflakes
+  "FBT",   # flake8-boolean-trap
+  "G",     # flake8-logging-format
+  "I",     # isort
+  "ICN",   # flake8-import-conventions
+  "ISC",   # flake8-implicit-str-concat
+  "LOG",   # flake8-logging
+  "N",     # pep8-naming
+  "NPY",   # NumPy-specific
+  "PD",    # pandas-vet
+  "PERF",  # perflint
+  "PT",    # flake8-pytest-style
+  "PTH",   # flake8-use-pathlib
+  "RET",   # flake8-return
+  "RSE",   # flake8-raise
+  "RUF",   # Ruff-specific
+  "SIM",   # flake8-simplify
+  "SLF",   # flake8-self
+  "T10",   # flake8-debugger
+  "TRY",   # tryceratops
+  "UP",    # pyupgrade
+  "W",     # pycodestyle
+  "YTT",   # flake8-2020
+]
+ignore = [
+  "D100",   # Missing docstring in public package
+  "D104",   # Missing docstring in public module
+  "ISC001", # Conflicts with formatter
+]
+unfixable = [
+  "RUF100", # = noqa-require-code, never fix automatically
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"*.ipynb" = [
+  "ARG005", # Unused lambda argument
+  "D",      # ignore pydocstyle rules for notebooks
+  "LOG015", # Allow root logger
+  "PD901",  # Allow df as variable
+]
+"__init__.py" = [
+  "F401", # ignore unused imports (F401) in all `__init__.py` files
+]
+"tests/*" = [
+  "D", # ignore pydocstyle rules for tests
+]
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
