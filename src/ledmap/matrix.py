@@ -105,6 +105,16 @@ class Base(ABC):
             and self.map == rhs.map
         )
 
+    def repr_args(self) -> tuple[list[str], dict[str, str]]:
+        """Get arguments to constructor."""
+        return [], {}
+
+    def __repr__(self) -> str:
+        """Representation of object."""
+        args, kwargs = self.repr_args()
+        args.extend(f"{k}={v}" for k, v in kwargs.items())
+        return f"{self.__class__.__name__}({','.join(args)})"
+
 
 class Matrix(Base):
     """Standard matrix."""
@@ -159,9 +169,11 @@ class Wrapper(Base):
         """Map pixel location to index."""
         return self._wraps.mapper(x, y)
 
-    def __repr__(self) -> str:
-        """Representation of object."""
-        return f"{self.__class__.__name__}({self._wraps!r})"
+    def repr_args(self) -> tuple[list[str], dict[str, str]]:
+        """Get arguments to constructor."""
+        args, kwargs = super().repr_args()
+        args.append(repr(self._wraps))
+        return args, kwargs
 
 
 class FlipLR(Wrapper):
@@ -257,6 +269,15 @@ class Limit(Wrapper):
             index = -1
         return index
 
+    def repr_args(self) -> tuple[list[str], dict[str, str]]:
+        """Get arguments to constructor."""
+        args, kwargs = super().repr_args()
+        if self._first > 0:
+            kwargs["first"] = repr(self._first)
+        if self._last is not None:
+            kwargs["last"] = repr(self._last)
+        return args, kwargs
+
 
 class Custom(Base):
     """Custom matrix."""
@@ -293,11 +314,10 @@ class Custom(Base):
         except IndexError:
             return -1
 
-    def __repr__(self) -> str:
-        """Representation of object."""
-        # Compact representation
-        s = ",".join(str(i) for i in self._map)
-        return (
-            f"{self.__class__.__name__}"
-            f"(map=[{s}],width={self._width!r},height={self._height!r})"
-        )
+    def repr_args(self) -> tuple[list[str], dict[str, str]]:
+        """Get arguments to repr."""
+        args, kwargs = super().repr_args()
+        kwargs["map"] = f"[{','.join(str(i) for i in self._map)}]"
+        kwargs["width"] = repr(self._width)
+        kwargs["height"] = repr(self._height)
+        return args, kwargs
