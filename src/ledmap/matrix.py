@@ -69,12 +69,20 @@ class Base(ABC):
         """Write WLED ledmap as compact JSON."""
         json.dump(self.ledmap(), f, indent=None, separators=(",", ":"))
 
-    def as_string(self, *, sep: str = ", ") -> str:
+    def as_string(
+        self,
+        *,
+        sep: str = ", ",
+        prefix: str = "",
+        postfix: str = "",
+        blank: str = "-1",
+        width: int = 0,
+    ) -> str:
         """Convert to string representation."""
-        strings = [str(i) for i in self]
-        n = max(len(s) for s in strings)
+        strings = [str(i) if i >= 0 else blank for i in self]
+        n = max(width, max(len(s) for s in strings))
         return "\n".join(
-            sep.join(f"{s:>{n}}" for s in row)
+            prefix + sep.join(f"{s:>{n}}" for s in row) + postfix
             for row in itertools.batched(strings, self.width, strict=True)
         )
 
@@ -85,7 +93,7 @@ class Base(ABC):
     def print(self, **kwargs: Any) -> None:
         """Print information about mapping."""
         print(repr(self))
-        print(self.as_string(**kwargs))
+        print(self.as_string(**{"prefix": "  ", "sep": "  ", **kwargs}))
 
     def __eq__(self, rhs) -> bool:
         """Check for equality of matrices."""
