@@ -14,6 +14,7 @@ WRAPPERS = [
     matrix.Rot90,
     matrix.Rot180,
     matrix.Rot270,
+    matrix.Limit,
 ]
 
 

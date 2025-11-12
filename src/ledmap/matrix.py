@@ -75,11 +75,11 @@ class Base(ABC):
         sep: str = ", ",
         prefix: str = "",
         postfix: str = "",
-        blank: str = "-1",
+        missing: str = "-1",
         width: int = 0,
     ) -> str:
         """Convert to string representation."""
-        strings = [str(i) if i >= 0 else blank for i in self]
+        strings = [str(i) if i >= 0 else missing for i in self]
         n = max(width, max(len(s) for s in strings))
         return "\n".join(
             prefix + sep.join(f"{s:>{n}}" for s in row) + postfix
@@ -141,8 +141,6 @@ class Matrix(Base):
 class Wrapper(Base):
     """Identity wrapper."""
 
-    transposing = False
-
     def __init__(self, mapper: Base):
         """Create wrapper for matrix."""
         self._wraps = mapper
@@ -202,8 +200,6 @@ class Serpentine(Wrapper):
 class Transpose(Wrapper):
     """Swap rows and columns."""
 
-    transposing = True
-
     @property
     def width(self) -> int:
         """Width of the matrix."""
@@ -233,6 +229,33 @@ class Rot270(Transpose):
     def mapper(self, x: int, y: int) -> int:
         """Map pixel location to index."""
         return self._wraps.mapper(self.height - y - 1, x)
+
+
+class Limit(Wrapper):
+    """Limit pixel indices."""
+
+    def __init__(
+        self,
+        mapper: Base,
+        first: int = 0,
+        last: int | None = None,
+    ):
+        """Create wrapper for matrix."""
+        super().__init__(mapper=mapper)
+
+        assert first >= 0
+        assert last is None or last > 0
+        self._first = first
+        self._last = last
+
+    def mapper(self, x: int, y: int) -> int:
+        """Map pixel location to index."""
+        index = self._wraps.mapper(x, y)
+        if index < self._first:
+            index = -1
+        if self._last is not None and index > self._last:
+            index = -1
+        return index
 
 
 class Custom(Base):
