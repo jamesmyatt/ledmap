@@ -4,13 +4,13 @@ build-backend = "uv_build"
 
 [project]
 name = "ledmap"
-version = "1.0"
+version = "0.1"
 description = "LED pixel mapper"
 license = "MIT"
 readme = "README.md"
 authors = [{ name = "James Myatt", email = "james@jamesmyatt.co.uk" }]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3.13",
