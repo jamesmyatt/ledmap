@@ -13,7 +13,7 @@ We need to record the architectural decisions made on this project.
 ## Decision
 
 We will use Architecture Decision Records,
-as described by Michael Nygard in this article: http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions.
+as described by Michael Nygard in this [article][1].
 We will move the justification to a separate section.
 
 ## Justification
@@ -25,3 +25,5 @@ Separating the justification leads to a more natural, easier to skim flow.
 ## Consequences
 
 See Michael Nygard's article, linked above.
+
+[1]: http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions
