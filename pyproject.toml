@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "ledmap"
-version = "0.1"
+version = "0.2"
 description = "LED pixel mapper"
 license = "MIT"
 readme = "README.md"
@@ -17,7 +17,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = ["numpy>=2"]
 
 [dependency-groups]
 dev = [
