@@ -1,12 +1,11 @@
 import io
-import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Any
 
 import numpy as np
 
-from . import make_array, wled
+from . import as_string, make_array, wled
 
 
 class Base(ABC):
@@ -72,22 +71,9 @@ class Base(ABC):
         """Write WLED ledmap as compact JSON."""
         return wled.dump(self.to_array(), f)
 
-    def as_string(
-        self,
-        *,
-        sep: str = ", ",
-        prefix: str = "",
-        postfix: str = "",
-        missing: str = "-1",
-        width: int = 0,
-    ) -> str:
+    def as_string(self, **kwargs: Any) -> str:
         """Convert to string representation."""
-        strings = [str(i) if i >= 0 else missing for i in self]
-        n = max(width, max(len(s) for s in strings))
-        return "\n".join(
-            prefix + sep.join(f"{s:>{n}}" for s in row) + postfix
-            for row in itertools.batched(strings, self.width, strict=True)
-        )
+        return as_string(self.to_array(), **kwargs)
 
     def __str__(self) -> str:
         """Render as string."""

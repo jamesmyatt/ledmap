@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Iterable
 
 import numpy as np
@@ -19,3 +20,30 @@ def make_array(
         array = array.reshape(shape)
 
     return array
+
+
+def as_string(
+    map: np.ndarray,  # noqa: A002
+    *,
+    sep: str = ", ",
+    prefix: str = "",
+    postfix: str = "",
+    missing: str = "-1",
+    width: int = 0,
+) -> str:
+    """Convert to string representation."""
+    strings = [str(i) if i >= 0 else missing for i in map.flat]
+    n = max(width, max(len(s) for s in strings))
+
+    match map.ndim:
+        case 1:
+            return prefix + sep.join(f"{s:>{n}}" for s in strings) + postfix
+        case 2:
+            cols = map.shape[1]
+            return "\n".join(
+                prefix + sep.join(f"{s:>{n}}" for s in row) + postfix
+                for row in itertools.batched(strings, cols, strict=True)
+            )
+
+    msg = "Shape not supported"
+    raise ValueError(msg)
