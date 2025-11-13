@@ -1,21 +1,30 @@
 import io
 import json
+from typing import Any
 
 import numpy as np
 
 from . import make_array
 
 
-def to_dict(mapping: np.ndarray, *, name: str = "") -> dict:
+def to_dict(mapping: np.ndarray, *, name: str = "") -> dict[str, Any]:
     """Make WLED ledmap dictionary."""
-    out = {}
+    # Create 1D array with missing values fixed
+    map_ = mapping.flatten()
+    map_ = np.where(map_ >= 0, map_, -1).astype(int)
+
+    # Construct data structure
+    out: dict[str, Any] = {}
     match mapping.ndim:
         case 1:
-            out["map"] = mapping.flatten().tolist()
+            out["map"] = map_.tolist()
         case 2:
-            out["map"] = mapping.flatten().tolist()
+            out["map"] = map_.tolist()
             out["width"] = mapping.shape[1]
             out["height"] = mapping.shape[0]
+        case _:
+            msg = "Mapping must have 1 or 2 dimensions."
+            raise ValueError(msg)
 
     # Extra attributes for MM
     if name:
