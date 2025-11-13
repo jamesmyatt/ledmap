@@ -1,9 +1,12 @@
 import io
 import itertools
-import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Any
+
+import numpy as np
+
+from . import make_array, wled
 
 
 class Base(ABC):
@@ -57,17 +60,17 @@ class Base(ABC):
         for y in range(self.height):
             yield self.mapper(x, y)
 
+    def to_array(self) -> np.ndarray:
+        """Convert to 2D NumPy array."""
+        return make_array(self.map, width=self.width)
+
     def ledmap(self) -> dict:
         """WLED ledmap information."""
-        return {
-            "width": self.width,
-            "height": self.height,
-            "map": self.map,
-        }
+        return wled.to_dict(self.to_array())
 
     def dump(self, f: io.TextIOBase) -> None:
         """Write WLED ledmap as compact JSON."""
-        json.dump(self.ledmap(), f, indent=None, separators=(",", ":"))
+        return wled.dump(self.to_array(), f)
 
     def as_string(
         self,
