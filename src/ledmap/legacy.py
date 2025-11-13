@@ -231,19 +231,25 @@ class Transpose(Wrapper):
 
 
 class Rot90(Transpose):
-    """Rotate quarter-turn clockwise."""
+    """Rotate quarter-turn anti-clockwise.
 
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(y, self.width - x - 1)
-
-
-class Rot270(Transpose):
-    """Rotate quarter-turn anti-clockwise."""
+    Matches numpy.rot90.
+    """
 
     def mapper(self, x: int, y: int) -> int:
         """Map pixel location to index."""
         return self._wraps.mapper(self.height - y - 1, x)
+
+
+class Rot270(Transpose):
+    """Rotate quarter-turn clockwise.
+
+    Matches numpy.rot90 with k=3.
+    """
+
+    def mapper(self, x: int, y: int) -> int:
+        """Map pixel location to index."""
+        return self._wraps.mapper(y, self.width - x - 1)
 
 
 class Limit(Wrapper):
