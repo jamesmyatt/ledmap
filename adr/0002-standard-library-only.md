@@ -6,6 +6,8 @@ Date: 2025-11-12
 
 Accepted
 
+Updated by [#6](./0006-maps-are-arrays.md)
+
 ## Context
 
 We need to choose an implementation philsophy.
