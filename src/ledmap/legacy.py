@@ -1,3 +1,8 @@
+"""Legacy pixel mapping.
+
+From v0.1. To be kept until replaced.
+"""
+
 import io
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
@@ -5,7 +10,8 @@ from typing import Any
 
 import numpy as np
 
-from . import as_string, make_array, wled
+from . import wled
+from .pixels import as_string, make_array
 
 
 class Base(ABC):
@@ -65,7 +71,7 @@ class Base(ABC):
 
     def ledmap(self) -> dict:
         """WLED ledmap information."""
-        return wled.to_dict(self.to_array())
+        return wled.from_array(self.to_array())
 
     def dump(self, f: io.TextIOBase) -> None:
         """Write WLED ledmap as compact JSON."""
