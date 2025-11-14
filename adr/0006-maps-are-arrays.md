@@ -15,6 +15,7 @@ In particular:
 
 - keeping all the required data and logic together
 - confusion between generators and operations
+- need for custom class for every potential operation
 
 This was a consequence of [ADR-2][ADR-2].
 We need to review whether there is a better way,
