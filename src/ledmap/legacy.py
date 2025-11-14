@@ -11,7 +11,7 @@ from typing import Any
 import numpy as np
 
 from . import wled
-from .pixels import as_string, make_array
+from .pixels import Mapping
 
 
 class Base(ABC):
@@ -65,9 +65,13 @@ class Base(ABC):
         for y in range(self.height):
             yield self.mapper(x, y)
 
+    def to_mapping(self) -> Mapping:
+        """Convert to 2D NumPy array."""
+        return Mapping.from_list(self.map, shape=(self.height, self.width))
+
     def to_array(self) -> np.ndarray:
         """Convert to 2D NumPy array."""
-        return make_array(self.map, width=self.width)
+        return self.to_mapping().array
 
     def ledmap(self) -> dict:
         """WLED ledmap information."""
@@ -79,7 +83,7 @@ class Base(ABC):
 
     def as_string(self, **kwargs: Any) -> str:
         """Convert to string representation."""
-        return as_string(self.to_array(), **kwargs)
+        return self.to_mapping().as_string(**kwargs)
 
     def __str__(self) -> str:
         """Render as string."""

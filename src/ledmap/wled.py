@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from .pixels import make_array
+from .pixels import make_array as __array_from_list
 
 
 def from_array(array: np.ndarray, *, name: str = "") -> dict[str, Any]:
@@ -41,10 +41,13 @@ def dump(mapping: dict | np.ndarray, f: io.TextIOBase) -> None:
     json.dump(mapping, f, indent=None, separators=(",", ":"))
 
 
-def to_array(mapping: dict) -> np.ndarray:
+def to_array(ledmap: dict) -> np.ndarray:
     """Make pixel mapping array."""
-    return make_array(
-        mapping["map"],
-        width=mapping.get("width", -1),
-        height=mapping.get("height", -1),
+    shape = (
+        ledmap.get("height", -1),
+        ledmap.get("width", -1),
     )
+    if all(s <= 0 for s in shape):
+        shape = ()
+
+    return __array_from_list(ledmap["map"], shape=shape)
