@@ -1,3 +1,5 @@
+"""Arbitrary utilities, including for notebooks."""
+
 import io
 from collections.abc import Callable
 

@@ -1,323 +1,91 @@
-import io
-import itertools
-import json
-from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
-from typing import Any
-
-
-class Base(ABC):
-    """2D pixel mapper base."""
-
-    @property
-    @abstractmethod
-    def width(self) -> int:
-        """Width of the matrix."""
-        ...
-
-    @property
-    @abstractmethod
-    def height(self) -> int:
-        """Height of the matrix."""
-        ...
-
-    def get(self, x: int, y: int) -> int:
-        """Index of the pixel with checks."""
-        assert x in range(self.width)
-        assert y in range(self.height)
-        return self.mapper(x, y)
-
-    @abstractmethod
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        ...
-
-    @property
-    def map(self) -> tuple[int, ...]:
-        """Indices of all pixels."""
-        return tuple(self)
-
-    def __iter__(self) -> Iterator[int]:
-        """Iterate over indices of each pixel."""
-        yield from self.iter()
-
-    def iter(self) -> Iterator[int]:
-        """Iterate over indices of each pixel."""
-        for y in range(self.height):
-            for x in range(self.width):
-                yield self.mapper(x, y)
-
-    def row(self, y: int) -> Iterator[int]:
-        """Iterate over indices of each pixel in row."""
-        for x in range(self.width):
-            yield self.mapper(x, y)
-
-    def column(self, x: int) -> Iterator[int]:
-        """Iterate over indices of each pixel in column."""
-        for y in range(self.height):
-            yield self.mapper(x, y)
-
-    def ledmap(self) -> dict:
-        """WLED ledmap information."""
-        return {
-            "width": self.width,
-            "height": self.height,
-            "map": self.map,
-        }
-
-    def dump(self, f: io.TextIOBase) -> None:
-        """Write WLED ledmap as compact JSON."""
-        json.dump(self.ledmap(), f, indent=None, separators=(",", ":"))
-
-    def as_string(
-        self,
-        *,
-        sep: str = ", ",
-        prefix: str = "",
-        postfix: str = "",
-        missing: str = "-1",
-        width: int = 0,
-    ) -> str:
-        """Convert to string representation."""
-        strings = [str(i) if i >= 0 else missing for i in self]
-        n = max(width, max(len(s) for s in strings))
-        return "\n".join(
-            prefix + sep.join(f"{s:>{n}}" for s in row) + postfix
-            for row in itertools.batched(strings, self.width, strict=True)
-        )
-
-    def __str__(self) -> str:
-        """Render as string."""
-        return self.as_string()
-
-    def print(self, **kwargs: Any) -> None:
-        """Print information about mapping."""
-        print(repr(self))
-        print(self.as_string(**{"prefix": "  ", "sep": "  ", **kwargs}))
-
-    def __eq__(self, rhs) -> bool:
-        """Check for equality of matrices."""
-        return (
-            isinstance(self, Base)
-            and isinstance(rhs, Base)
-            and self.width == rhs.width
-            and self.height == rhs.height
-            and self.map == rhs.map
-        )
+"""2D matrix of pixels."""
 
-    def repr_args(self) -> tuple[list[str], dict[str, str]]:
-        """Get arguments to constructor."""
-        return [], {}
+from typing import Literal
 
-    def __repr__(self) -> str:
-        """Representation of object."""
-        args, kwargs = self.repr_args()
-        args.extend(f"{k}={v}" for k, v in kwargs.items())
-        return f"{self.__class__.__name__}({','.join(args)})"
+import numpy as np
 
+from .line import make_line
 
-class Matrix(Base):
-    """Standard matrix."""
+FirstPixel2D = Literal["top-left", "top-right", "bottom-left", "bottom-right"]
 
-    def __init__(self, width: int = 1, height: int = 1):
-        """Create standard matrix."""
-        assert width > 0
-        assert height > 0
-        self._width = width
-        self._height = height
 
-    @property
-    def width(self) -> int:
-        """Width of the matrix."""
-        return self._width
+def check_shape(
+    height: int = -1,
+    width: int = -1,
+    pixels: np.ndarray | None = None,
+) -> tuple[int, int]:
+    """Check/infer shape of matrix."""
+    msg = "At least 2 of height, width and leds must be provided."
+    if pixels is None:
+        if width <= 0 or height <= 0:
+            raise ValueError(msg)
+    else:
+        if width <= 0 and height <= 0:
+            raise ValueError(msg)
 
-    @property
-    def height(self) -> int:
-        """Height of the matrix."""
-        return self._height
+        # Calculate missing dimension by rounding-up
+        if width <= 0:
+            width = -(-pixels.size // height)
+        elif height <= 0:
+            height = -(-pixels.size // width)
 
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        # Default mapper
-        return x + y * self.width
+    return height, width
 
-    def __repr__(self) -> str:
-        """Representation of object."""
-        return (
-            f"{self.__class__.__name__}(width={self._width!r},height={self._height!r})"
-        )
 
+def make_matrix(
+    height: int = -1,
+    width: int = -1,
+    *,
+    pixels: np.ndarray | None = None,
+    serpentine: bool = False,
+    vertical: bool = False,
+    first: FirstPixel2D = "top-left",
+    fill_value: int = -1,
+) -> np.ndarray:
+    """Generate map for simple matrix."""
+    height, width = check_shape(height, width, pixels)
+    pixels = make_line(
+        width * height, pixels=pixels, first="start", fill_value=fill_value
+    )
 
-class Wrapper(Base):
-    """Identity wrapper."""
+    order = "F" if vertical else "C"
+    matrix = pixels.reshape((height, width), order=order)
 
-    def __init__(self, mapper: Base):
-        """Create wrapper for matrix."""
-        self._wraps = mapper
+    if serpentine:
+        matrix = __serpentine(matrix, vertical=vertical)
 
-    @property
-    def width(self) -> int:
-        """Width of the matrix."""
-        return self._wraps.width
+    if first.lower() != "top-left":
+        matrix = reorient(matrix, first)
 
-    @property
-    def height(self) -> int:
-        """Height of the matrix."""
-        return self._wraps.height
+    return matrix
 
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(x, y)
 
-    def repr_args(self) -> tuple[list[str], dict[str, str]]:
-        """Get arguments to constructor."""
-        args, kwargs = super().repr_args()
-        args.append(repr(self._wraps))
-        return args, kwargs
+def reorient(matrix: np.ndarray, first: FirstPixel2D = "top-left") -> np.ndarray:
+    """Reorient matrix by new position of first (top-left) pixel.
 
+    Maintains direction of the sequence (i.e. horizontal or vertical).
+    """
+    assert matrix.ndim == 2
+    origin = first.lower().split("-", 1)
+    if origin[0] == "bottom":
+        matrix = np.flipud(matrix)
+    if origin[1] == "right":
+        matrix = np.fliplr(matrix)
+    return matrix
 
-class FlipLR(Wrapper):
-    """Flip left-right."""
 
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(self.width - x - 1, y)
+def serpentine(matrix: np.ndarray, *, vertical: bool = False) -> np.ndarray:
+    """Make matrix serpentine."""
+    assert matrix.ndim == 2
 
+    matrix = np.copy(matrix)
+    if vertical:
+        matrix[:, 1::2] = np.flip(matrix[:, 1::2], axis=0)
+    else:
+        matrix[1::2, :] = np.flip(matrix[1::2, :], axis=1)
 
-class FlipUD(Wrapper):
-    """Flip upside-down."""
+    return matrix
 
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(x, self.height - y - 1)
 
-
-class Rot180(Wrapper):
-    """Rotate half-turn."""
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(self.width - x - 1, self.height - y - 1)
-
-
-class Serpentine(Wrapper):
-    """Flip alternate rows."""
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        x_ = self.width - x - 1 if y % 2 else x
-        return self._wraps.mapper(x_, y)
-
-
-class Transpose(Wrapper):
-    """Swap rows and columns."""
-
-    @property
-    def width(self) -> int:
-        """Width of the matrix."""
-        return self._wraps.height
-
-    @property
-    def height(self) -> int:
-        """Height of the matrix."""
-        return self._wraps.width
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(y, x)
-
-
-class Rot90(Transpose):
-    """Rotate quarter-turn clockwise."""
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(y, self.width - x - 1)
-
-
-class Rot270(Transpose):
-    """Rotate quarter-turn anti-clockwise."""
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        return self._wraps.mapper(self.height - y - 1, x)
-
-
-class Limit(Wrapper):
-    """Limit pixel indices."""
-
-    def __init__(
-        self,
-        mapper: Base,
-        first: int = 0,
-        last: int | None = None,
-    ):
-        """Create wrapper for matrix."""
-        super().__init__(mapper=mapper)
-
-        assert first >= 0
-        assert last is None or last > 0
-        self._first = first
-        self._last = last
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        index = self._wraps.mapper(x, y)
-        if index < self._first:
-            index = -1
-        if self._last is not None and index > self._last:
-            index = -1
-        return index
-
-    def repr_args(self) -> tuple[list[str], dict[str, str]]:
-        """Get arguments to constructor."""
-        args, kwargs = super().repr_args()
-        if self._first > 0:
-            kwargs["first"] = repr(self._first)
-        if self._last is not None:
-            kwargs["last"] = repr(self._last)
-        return args, kwargs
-
-
-class Custom(Base):
-    """Custom matrix."""
-
-    def __init__(
-        self,
-        map: Iterable[int],  # noqa: A002
-        width: int = 1,
-        height: int | None = None,
-    ):
-        """Create custom matrix."""
-        assert width > 0
-        assert height is None or height > 0
-        self._map: tuple[int, ...] = tuple(map)
-        self._width = width
-        self._height = -(-len(self._map) // self._width) if height is None else height
-
-    @property
-    def width(self) -> int:
-        """Width of the matrix."""
-        return self._width
-
-    @property
-    def height(self) -> int:
-        """Height of the matrix."""
-        return self._height
-
-    def mapper(self, x: int, y: int) -> int:
-        """Map pixel location to index."""
-        # Custom mapper
-        index = x + y * self.width
-        try:
-            return self._map[index]
-        except IndexError:
-            return -1
-
-    def repr_args(self) -> tuple[list[str], dict[str, str]]:
-        """Get arguments to repr."""
-        args, kwargs = super().repr_args()
-        kwargs["map"] = f"[{','.join(str(i) for i in self._map)}]"
-        kwargs["width"] = repr(self._width)
-        kwargs["height"] = repr(self._height)
-        return args, kwargs
+# Make private version to avoid bypass with argument names
+__serpentine = serpentine
