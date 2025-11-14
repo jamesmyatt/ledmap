@@ -731,7 +731,7 @@ wheels = [
 
 [[package]]
 name = "ledmap"
-version = "0.2"
+version = "0.2a1"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
