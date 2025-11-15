@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from .pixels import make_array as __array_from_list
+from .pixels import make_array as _make_array
 
 
 def from_array(array: np.ndarray, *, name: str = "") -> dict[str, Any]:
@@ -16,12 +16,13 @@ def from_array(array: np.ndarray, *, name: str = "") -> dict[str, Any]:
     map_ = np.where(map_ >= 0, map_, -1).astype(int)
 
     # Construct data structure
-    out: dict[str, Any] = {}
+    out: dict[str, Any] = {
+        "map": map_.tolist(),
+    }
     match array.ndim:
         case 1:
-            out["map"] = map_.tolist()
+            pass
         case 2:
-            out["map"] = map_.tolist()
             out["width"] = array.shape[1]
             out["height"] = array.shape[0]
         case _:
@@ -50,4 +51,4 @@ def to_array(ledmap: dict) -> np.ndarray:
     if all(s <= 0 for s in shape):
         shape = ()
 
-    return __array_from_list(ledmap["map"], shape=shape)
+    return _make_array(ledmap["map"], shape=shape)
