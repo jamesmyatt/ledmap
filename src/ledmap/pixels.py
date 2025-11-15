@@ -159,6 +159,7 @@ class Mapping:
     def _repr_pretty_(self, p, cycle: bool = False) -> None:  # noqa: ARG002, FBT001, FBT002
         """Pretty printer for IPython."""
         p.text(self.summary())
+        p.text("\n")
         p.text(self.as_string())
 
     def _repr_html_(self) -> str:
