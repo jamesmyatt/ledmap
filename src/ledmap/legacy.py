@@ -8,10 +8,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Any
 
-import numpy as np
-
 from . import wled
-from .pixels import Mapping
+from .pixels import Mapping, PixelArrayT
 
 
 class Base(ABC):
@@ -69,7 +67,7 @@ class Base(ABC):
         """Convert to 2D NumPy array."""
         return Mapping.from_list(self.map, shape=(self.height, self.width))
 
-    def to_array(self) -> np.ndarray:
+    def to_array(self) -> PixelArrayT:
         """Convert to 2D NumPy array."""
         return self.to_mapping().array
 

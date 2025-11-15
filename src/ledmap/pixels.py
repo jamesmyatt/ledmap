@@ -8,13 +8,15 @@ from typing import Any, Concatenate
 
 import numpy as np
 
+PixelArrayT = np.ndarray
+
 
 def make_array(
-    pixels: int | Iterable[int] | np.ndarray,
+    pixels: int | Iterable[int] | PixelArrayT,
     *,
     shape: tuple[int, ...] = (),
     vertical: bool = False,
-) -> np.ndarray:
+) -> PixelArrayT:
     """Make LED mapping array."""
     if isinstance(pixels, int):
         array = np.arange(pixels, dtype=int)
@@ -29,7 +31,7 @@ def make_array(
 
 
 def as_string(
-    array: np.ndarray,
+    array: PixelArrayT,
     *,
     sep: str = ", ",
     prefix: str = "",
@@ -55,11 +57,34 @@ def as_string(
     raise ValueError(msg)
 
 
+def offset(array: PixelArrayT, k: int) -> PixelArrayT:
+    """Offset pixels."""
+    start = max(-k, 0)
+    return np.where(array >= start, array + k, -1)
+
+
+def select(array: PixelArrayT, pixels: np.ndarray) -> PixelArrayT:
+    """Select pixels."""
+    condition = pixels if pixels.dtype == bool else pixels >= 0
+    return np.where(condition, array, -1)
+
+
+def limit(array: PixelArrayT, start: int = 0, stop: int = -1) -> PixelArrayT:
+    """Limit pixel range.
+
+    Limit to range [start, stop). Inclusive on left, exclusive on right.
+    """
+    condition = array >= max(start, 0)
+    if stop > 1:
+        condition &= array < stop
+    return np.where(condition, array, -1)
+
+
 @dataclass
 class Mapping:
     """Pixel map from mapping array."""
 
-    array: np.ndarray
+    array: PixelArrayT
 
     @classmethod
     def from_list(
@@ -79,7 +104,7 @@ class Mapping:
         shape: tuple[int, ...],
         *,
         vertical: bool = False,
-    ):
+    ) -> "Mapping":
         """Create default mapping from shape."""
         if not all(s > 0 for s in shape):
             msg = "All dimensions must be strictly positive."
@@ -100,13 +125,18 @@ class Mapping:
         """Shape of array."""
         return self.array.shape
 
+    @property
+    def count(self) -> int:
+        """Number of pixels in array."""
+        return np.sum(self.array >= 0, dtype=int).item()
+
     def __iter__(self) -> Iterable[int]:
         """Iterate over pixel indices."""
         yield from self.array.flat
 
     def apply(
         self,
-        func: Callable[Concatenate[np.ndarray, ...], np.ndarray] | None = None,
+        func: Callable[Concatenate[PixelArrayT, ...], PixelArrayT] | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> "Mapping":
@@ -155,9 +185,10 @@ class Mapping:
 
     def summary(self) -> str:
         """Summary text."""
+        c = self.count
         return (
-            f"{'x'.join(str(n) for n in self.shape)} pixel"
-            f"{'' if self.array.size == 1 else 's'}"
+            f"{'x'.join(str(n) for n in self.shape)} array"
+            f" ({c} pixel{'' if c == 1 else 's'})"
         )
 
     def _repr_pretty_(self, p, cycle: bool = False) -> None:  # noqa: ARG002, FBT001, FBT002
@@ -245,7 +276,7 @@ class Mapper:
         """Iterate over pixel indices."""
         yield from self.iter()
 
-    def to_array(self) -> np.ndarray:
+    def to_array(self) -> PixelArrayT:
         """Convert to NumPy array."""
         return np.array(list(self), dtype=int).reshape(self.shape)
 

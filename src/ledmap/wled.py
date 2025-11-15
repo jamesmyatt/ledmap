@@ -12,8 +12,8 @@ from .pixels import make_array as _make_array
 def from_array(array: np.ndarray, *, name: str = "") -> dict[str, Any]:
     """Make WLED ledmap dictionary."""
     # Create 1D array with missing values fixed
-    map_ = array.flatten()
-    map_ = np.where(map_ >= 0, map_, -1).astype(int)
+    map_ = array.flatten().astype(int)
+    map_ = np.where(map_ >= 0, map_, -1)
 
     # Construct data structure
     out: dict[str, Any] = {
