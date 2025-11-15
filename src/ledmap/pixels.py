@@ -106,11 +106,15 @@ class Mapping:
 
     def apply(
         self,
-        func: Callable[Concatenate[np.ndarray, ...], np.ndarray],
+        func: Callable[Concatenate[np.ndarray, ...], np.ndarray] | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> "Mapping":
         """Apply function to mapping array."""
+        # Shortcut for no-op
+        if func is None:
+            return self
+
         array = func(self.array, *args, **kwargs)
         return Mapping(array)
 
