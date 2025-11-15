@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "ledmap"
-version = "0.2a1"
+version = "0.2a2"
 description = "LED pixel mapper"
 license = "MIT"
 readme = "README.md"

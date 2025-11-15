@@ -1,31 +1,37 @@
 """Pixel mappings."""
 
+import io
 import itertools
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Iterator
+from dataclasses import dataclass
+from typing import Any, Concatenate
 
 import numpy as np
 
+PixelArrayT = np.ndarray
+
 
 def make_array(
-    map: Iterable[int],  # noqa: A002
-    width: int = -1,
-    height: int = -1,
-) -> np.ndarray:
+    pixels: int | Iterable[int] | PixelArrayT,
+    *,
+    shape: tuple[int, ...] = (),
+    vertical: bool = False,
+) -> PixelArrayT:
     """Make LED mapping array."""
-    array = np.array(map, dtype=int)
+    if isinstance(pixels, int):
+        array = np.arange(pixels, dtype=int)
+    else:
+        array = np.asanyarray(pixels, dtype=int)
 
-    if width > 0 or height > 0:
-        shape = (
-            height if height > 0 else -1,
-            width if width > 0 else -1,
-        )
-        array = array.reshape(shape)
+    if shape:
+        order = "F" if vertical else "C"
+        array = array.reshape(shape, order=order)
 
     return array
 
 
 def as_string(
-    array: np.ndarray,
+    array: PixelArrayT,
     *,
     sep: str = ", ",
     prefix: str = "",
@@ -49,3 +55,253 @@ def as_string(
 
     msg = "Shape not supported"
     raise ValueError(msg)
+
+
+def offset(array: PixelArrayT, k: int) -> PixelArrayT:
+    """Offset pixels."""
+    start = max(-k, 0)
+    return np.where(array >= start, array + k, -1)
+
+
+def select(array: PixelArrayT, pixels: np.ndarray) -> PixelArrayT:
+    """Select pixels."""
+    condition = pixels if pixels.dtype == bool else pixels >= 0
+    return np.where(condition, array, -1)
+
+
+def limit(array: PixelArrayT, start: int = 0, stop: int = -1) -> PixelArrayT:
+    """Limit pixel range.
+
+    Limit to range [start, stop). Inclusive on left, exclusive on right.
+    """
+    condition = array >= max(start, 0)
+    if stop > 1:
+        condition &= array < stop
+    return np.where(condition, array, -1)
+
+
+@dataclass
+class Mapping:
+    """Pixel map from mapping array."""
+
+    array: PixelArrayT
+
+    @classmethod
+    def from_list(
+        cls,
+        pixels: Iterable[int],
+        *,
+        shape: tuple[int, ...] = (),
+        vertical: bool = False,
+    ) -> "Mapping":
+        """Make LED mapping array."""
+        array = make_array(pixels, shape=shape, vertical=vertical)
+        return cls(array)
+
+    @classmethod
+    def from_shape(
+        cls,
+        shape: tuple[int, ...],
+        *,
+        vertical: bool = False,
+    ) -> "Mapping":
+        """Create default mapping from shape."""
+        if not all(s > 0 for s in shape):
+            msg = "All dimensions must be strictly positive."
+            raise ValueError(msg)
+
+        length = np.prod(shape, dtype=int).item()
+        array = make_array(length, shape=shape, vertical=vertical)
+
+        return cls(array)
+
+    @property
+    def ndim(self) -> int:
+        """Number of array dimensions."""
+        return self.array.ndim
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """Shape of array."""
+        return self.array.shape
+
+    @property
+    def count(self) -> int:
+        """Number of pixels in array."""
+        return np.sum(self.array >= 0, dtype=int).item()
+
+    def __iter__(self) -> Iterable[int]:
+        """Iterate over pixel indices."""
+        yield from self.array.flat
+
+    def apply(
+        self,
+        func: Callable[Concatenate[PixelArrayT, ...], PixelArrayT] | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> "Mapping":
+        """Apply function to mapping array."""
+        # Shortcut for no-op
+        if func is None:
+            return self
+
+        array = func(self.array, *args, **kwargs)
+        return Mapping(array)
+
+    def reshape(self, shape: tuple[int, ...]) -> "Mapping":
+        """Reshape pixel array."""
+        # TODO: implement padding/truncating
+        return self.apply(np.reshape, shape=shape)
+
+    def as_string(self, **kwargs: Any) -> str:
+        """Convert to string representation."""
+        return as_string(self.array, **kwargs)
+
+    def __str__(self) -> str:
+        """Render as string."""
+        return self.as_string()
+
+    def print(self, **kwargs: Any) -> None:
+        """Print information about mapping."""
+        print(self.as_string(**{"prefix": "  ", "sep": "  ", **kwargs}))
+
+    def equals(self, rhs: "Mapping | np.ndarray") -> bool:
+        """Check for equality of mappings."""
+        if isinstance(rhs, Mapping):
+            rhs = rhs.array
+        return np.array_equal(self.array, rhs, equal_nan=True)
+
+    def to_wled(self) -> dict[str, Any]:
+        """WLED ledmap information."""
+        from .wled import from_array as _from_array
+
+        return _from_array(self.array)
+
+    def dump_wled(self, f: io.TextIOBase) -> None:
+        """Write WLED ledmap file."""
+        from .wled import dump as _dump
+
+        return _dump(self.array, f)
+
+    def summary(self) -> str:
+        """Summary text."""
+        c = self.count
+        return (
+            f"{'x'.join(str(n) for n in self.shape)} array"
+            f" ({c} pixel{'' if c == 1 else 's'})"
+        )
+
+    def _repr_pretty_(self, p, cycle: bool = False) -> None:  # noqa: ARG002, FBT001, FBT002
+        """Pretty printer for IPython."""
+        p.text(self.summary())
+        p.text("\n")
+        p.text(self.as_string())
+
+    def _repr_html_(self) -> str:
+        out = f"<p>{self.summary()}</p>"
+        match self.ndim:
+            case 1:
+                out += (
+                    "<table><tr>"
+                    + "".join(
+                        "<tr>"
+                        + "".join(
+                            f'<td style="border: 1px solid black;">{i}</td>'
+                            for i in row
+                        )
+                        + "</tr>"
+                        for row in itertools.batched(self.array.flat, 20, strict=False)
+                    )
+                    + "</tr><table>"
+                )
+            case 2:
+                out += (
+                    "<table>"
+                    + "".join(
+                        "<tr>"
+                        + "".join(
+                            f'<td style="border: 1px solid black;">{i}</td>'
+                            for i in row
+                        )
+                        + "</tr>"
+                        for row in self.array
+                    )
+                    + "<table>"
+                )
+            case _:
+                out += f"<pre>{self!r}</pre>"
+        return out
+
+
+@dataclass
+class Mapper:
+    """Pixel map from mapping function."""
+
+    shape: tuple[int, ...]
+
+    @property
+    def length(self) -> int:
+        """Size of array."""
+        return np.prod(self.shape, dtype=int).item()
+
+    def summary(self) -> str:
+        """Summary text."""
+        return (
+            f"{'x'.join(str(n) for n in self.shape)} pixel"
+            f"{'' if self.length == 1 else 's'}"
+        )
+
+    def check(self) -> None:
+        """Check mapper parameters."""
+        msg = None
+        if not self.shape:
+            msg = "Shape must not be empty."
+        elif any(s <= 0 for s in self.shape):
+            msg = "All dimensions must have size > 0."
+        if msg:
+            raise ValueError(msg)
+
+    def index(self) -> Iterator[tuple[int, ...]]:
+        """Iterate over location indices."""
+        ranges = (range(n) for n in self.shape)
+        return itertools.product(*ranges)
+
+    def iter(self) -> Iterator[int]:
+        """Iterate over pixel indices."""
+        self.check()
+        for loc in self.index():
+            yield self.get(*loc)
+
+    def __iter__(self) -> Iterator[int]:
+        """Iterate over pixel indices."""
+        yield from self.iter()
+
+    def to_array(self) -> PixelArrayT:
+        """Convert to NumPy array."""
+        return np.array(list(self), dtype=int).reshape(self.shape)
+
+    def to_mapping(self) -> Mapping:
+        """Convert to mapping object."""
+        return Mapping(self.to_array())
+
+    def get(self, *loc: int) -> int:
+        """Get pixel index at location.
+
+        Override this method for different pixel mappings.
+
+        Default is row-major index.
+        """
+        return _ravel_index_C(loc, self.shape)
+
+
+def _ravel_index_C(index: tuple[int, ...], shape: tuple[int, ...]) -> int:  # noqa: N802
+    # TODO: This could be more efficient, or use numpy
+    out: int = 0
+    k: int = 1
+    for i, n in zip(index, shape, strict=True):
+        if not 0 <= i < n:
+            msg = "Index out of range"
+            raise ValueError(msg)
+        out = (k * out) + i
+        k = n
+    return out

@@ -6,22 +6,23 @@ from typing import Any
 
 import numpy as np
 
-from .pixels import make_array
+from .pixels import make_array as _make_array
 
 
 def from_array(array: np.ndarray, *, name: str = "") -> dict[str, Any]:
     """Make WLED ledmap dictionary."""
     # Create 1D array with missing values fixed
-    map_ = array.flatten()
-    map_ = np.where(map_ >= 0, map_, -1).astype(int)
+    map_ = array.flatten().astype(int)
+    map_ = np.where(map_ >= 0, map_, -1)
 
     # Construct data structure
-    out: dict[str, Any] = {}
+    out: dict[str, Any] = {
+        "map": map_.tolist(),
+    }
     match array.ndim:
         case 1:
-            out["map"] = map_.tolist()
+            pass
         case 2:
-            out["map"] = map_.tolist()
             out["width"] = array.shape[1]
             out["height"] = array.shape[0]
         case _:
@@ -41,10 +42,13 @@ def dump(mapping: dict | np.ndarray, f: io.TextIOBase) -> None:
     json.dump(mapping, f, indent=None, separators=(",", ":"))
 
 
-def to_array(mapping: dict) -> np.ndarray:
+def to_array(ledmap: dict) -> np.ndarray:
     """Make pixel mapping array."""
-    return make_array(
-        mapping["map"],
-        width=mapping.get("width", -1),
-        height=mapping.get("height", -1),
+    shape = (
+        ledmap.get("height", -1),
+        ledmap.get("width", -1),
     )
+    if all(s <= 0 for s in shape):
+        shape = ()
+
+    return _make_array(ledmap["map"], shape=shape)

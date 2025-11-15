@@ -5,6 +5,7 @@ from typing import Literal
 import numpy as np
 
 from .line import make_line
+from .pixels import PixelArrayT
 
 FirstPixel2D = Literal["top-left", "top-right", "bottom-left", "bottom-right"]
 
@@ -12,7 +13,7 @@ FirstPixel2D = Literal["top-left", "top-right", "bottom-left", "bottom-right"]
 def check_shape(
     height: int = -1,
     width: int = -1,
-    pixels: np.ndarray | None = None,
+    pixels: PixelArrayT | None = None,
 ) -> tuple[int, int]:
     """Check/infer shape of matrix."""
     msg = "At least 2 of height, width and leds must be provided."
@@ -36,12 +37,12 @@ def make_matrix(
     height: int = -1,
     width: int = -1,
     *,
-    pixels: np.ndarray | None = None,
+    pixels: PixelArrayT | None = None,
     serpentine: bool = False,
     vertical: bool = False,
     first: FirstPixel2D = "top-left",
     fill_value: int = -1,
-) -> np.ndarray:
+) -> PixelArrayT:
     """Generate map for simple matrix."""
     height, width = check_shape(height, width, pixels)
     pixels = make_line(
@@ -60,7 +61,7 @@ def make_matrix(
     return matrix
 
 
-def reorient(matrix: np.ndarray, first: FirstPixel2D = "top-left") -> np.ndarray:
+def reorient(matrix: PixelArrayT, first: FirstPixel2D = "top-left") -> PixelArrayT:
     """Reorient matrix by new position of first (top-left) pixel.
 
     Maintains direction of the sequence (i.e. horizontal or vertical).
@@ -74,7 +75,7 @@ def reorient(matrix: np.ndarray, first: FirstPixel2D = "top-left") -> np.ndarray
     return matrix
 
 
-def serpentine(matrix: np.ndarray, *, vertical: bool = False) -> np.ndarray:
+def serpentine(matrix: PixelArrayT, *, vertical: bool = False) -> PixelArrayT:
     """Make matrix serpentine."""
     assert matrix.ndim == 2
 

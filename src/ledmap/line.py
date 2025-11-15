@@ -4,12 +4,14 @@ from typing import Literal
 
 import numpy as np
 
+from .pixels import PixelArrayT
+
 FirstPixel1D = Literal["start", "end"]
 
 
 def check_shape(
     length: int = -1,
-    pixels: np.ndarray | None = None,
+    pixels: PixelArrayT | None = None,
 ) -> int:
     """Check/infer shape of line."""
     if length <= 0:
@@ -24,10 +26,10 @@ def check_shape(
 def make_line(
     length: int = -1,
     *,
-    pixels: np.ndarray | None = None,
+    pixels: PixelArrayT | None = None,
     first: FirstPixel1D = "start",
     fill_value: int = -1,
-) -> np.ndarray:
+) -> PixelArrayT:
     """Prepare line of pixels of specific length."""
     length = check_shape(length, pixels)
 
