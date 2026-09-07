@@ -16,7 +16,7 @@ repos:
       - id: check-toml
       - id: check-yaml
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.6.2
+    rev: v3.9.6
     hooks:
       - id: prettier
         exclude: examples/.*\.json$
@@ -26,7 +26,7 @@ repos:
       - id: taplo-format
         alias: toml-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.4
+    rev: v0.16.6
     hooks:
       - id: ruff-check # really safe fixes
         name: ruff-fix
@@ -35,7 +35,7 @@ repos:
       - id: ruff-format
       - id: ruff-check
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.4.1
+    rev: 3.11.1
     hooks:
       - id: editorconfig-checker
         alias: ec
